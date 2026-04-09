@@ -1,4 +1,6 @@
 import os
+import cv2
+import numpy as np
 import json
 import torch
 import torchvision.transforms as transforms
@@ -49,8 +51,17 @@ def evaluate(blur_strength):
 
         img = Image.open(img_path).convert("RGB")
 
+        img = np.array(img)
+
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
         if blur_strength > 0:
-            img = img.filter(ImageFilter.GaussianBlur(radius=blur_strength))
+            k = 2 * blur_strength + 1
+            img = cv2.GaussianBlur(img, (k, k), blur_strength)
+
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        img = Image.fromarray(img)
 
         img = transform(img).unsqueeze(0).to(device)
 
