@@ -25,23 +25,26 @@ def get_label(xml_path):
     return 0
 
 
-def multiscale_template_match(image, template, threshold):
-
+def gaussian_pyramid_template_match(image, template, threshold):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
     best_score = 0
 
-    for scale in np.linspace(0.3,1.0,10):
+    current_template = template.copy()
+    
+    while current_template.shape[0] > 10 and current_template.shape[1] > 10:
+        
+        if current_template.shape[0] > gray.shape[0] or current_template.shape[1] > gray.shape[1]:
+            break
 
-        resized = cv2.resize(template,None,fx=scale,fy=scale)
+        result = cv2.matchTemplate(gray, current_template, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, _ = cv2.minMaxLoc(result)
+        
+        best_score = max(best_score, max_val)
+        
+        if best_score > threshold:
+            return True
 
-        if resized.shape[0] > gray.shape[0] or resized.shape[1] > gray.shape[1]:
-            continue
-
-        result = cv2.matchTemplate(gray,resized,cv2.TM_CCOEFF_NORMED)
-        _,max_val,_,_ = cv2.minMaxLoc(result)
-
-        best_score = max(best_score,max_val)
+        current_template = cv2.pyrDown(current_template)
 
     return best_score > threshold
 
@@ -69,7 +72,7 @@ def evaluate_template(blur_strength, threshold):
 
         img = apply_blur(img,blur_strength)
 
-        pred = multiscale_template_match(img,template,threshold)
+        pred = gaussian_pyramid_template_match(img,template,threshold)
 
         label = get_label(xml_path)
 
